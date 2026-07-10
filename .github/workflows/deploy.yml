@@ -34,11 +34,15 @@ jobs:
           port: ${{ secrets.HOSTINGER_PORT }}
           script: |
             # Navigate to the project directory
-            # IMPORTANT: Change 'public_html/transport-system' to your actual path on Hostinger
-            cd public_html/transport-system
+            cd domains/maroofalbaraka.com/public_html
             
-            # Pull the latest changes from GitHub
-            git pull origin main || git pull origin master
+            # Initialize git if it doesn't exist, fetch, and force reset to match GitHub
+            if [ ! -d ".git" ]; then
+              git init
+              git remote add origin https://github.com/ranaaalihaider/Transport-System.git
+            fi
+            git fetch --all
+            git reset --hard origin/main || git reset --hard origin/master
             
             # Install production dependencies
             composer install --no-dev --optimize-autoloader
