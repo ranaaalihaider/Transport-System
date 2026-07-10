@@ -1,0 +1,54 @@
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches:
+      - main
+      - master # Triggers on push to either main or master branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2' # Adjust this to match your Hostinger PHP version (e.g., 8.1, 8.2, 8.3)
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, bcmath
+          coverage: none
+
+      - name: Install Composer Dependencies
+        run: composer install --no-dev --optimize-autoloader --prefer-dist --no-interaction --no-progress
+
+      - name: Deploy to Hostinger via SSH and Rsync
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }} # Highly recommended: use SSH Key instead of password
+          password: ${{ secrets.HOSTINGER_PASSWORD }} # Fallback if you prefer password, but key is better
+          port: ${{ secrets.HOSTINGER_PORT }}
+          script: |
+            # Navigate to the project directory
+            # IMPORTANT: Change 'public_html/transport-system' to your actual path on Hostinger
+            cd public_html/transport-system
+            
+            # Pull the latest changes from GitHub
+            git pull origin main || git pull origin master
+            
+            # Install production dependencies
+            composer install --no-dev --optimize-autoloader
+            
+            # Run database migrations (the --force flag is required in production)
+            php artisan migrate --force
+            
+            # Clear and rebuild caches for optimized performance
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            
+            echo "Deployment completed successfully!"
